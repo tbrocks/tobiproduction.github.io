@@ -1,76 +1,91 @@
 <?php
-session_start();
-if(!isset($_SESSION['userLogin'])){
-    die("Name parameter missing");
-}
-else {
-  echo "<br>You are logged in !</br>";
-}
-
-if(isset($_POST['Logout'])){
-  session.start();
-  session.destroy();
-  header('Location: index.php');
-}
-
 require_once "pdo.php";
 
-if(isset($_POST['mileage']) && isset($_POST['year']) && isset($_POST['make']) && !is_numeric($_POST['mileage']) || !is_numeric($_POST['year'])){
-  echo "<br>Mileage and year must be numeric</br>";
-}
-elseif(empty($_POST['make'])){
-  echo "<br>Make is required</br>";
-}
-elseif(isset($_POST['mileage']) && isset($_POST['year']) && isset($_POST['make'])) {
-  $sql = "INSERT INTO autos (make, year, mileage)
-        VALUES (:make, :year, :mileage)";
-  echo("<pre>\n".$sql."\n</pre>\n");
-  $stmt = $pdo->prepare($sql);
-  $stmt->execute(array(
-    ':make' => $_POST['make'],
-    ':year' => $_POST['year'],
-    ':mileage' => $_POST['mileage']
-  ));
-echo '<font color="green">' . "Record inserted" . '</font><br>';
+$failure = false;  // If we have no POST data
+$success = false;  // If the record was added
+
+// Demand a GET parameter
+if ( ! isset($_GET['name']) || strlen($_GET['name']) < 1  ) {
+    die('Name parameter missing');
 }
 
- ?>
+// If the user requested logout go back to index.php
+if ( isset($_POST['logout']) ) {
+    header('Location: index.php');
+    return;
+}
+
+if (isset($_POST['make']) && isset($_POST['year']) && isset($_POST['mileage'])) {
+    if (!is_numeric($_POST['year']) || !is_numeric($_POST['mileage'])) {
+        $failure = "Mileage and year must be numeric";
+    } elseif (strlen($_POST['make']) < 1 ) {
+        $failure = "Make is required";
+    } else {
+        $sql = "INSERT INTO autos (make, year, mileage) VALUES ( :mk, :yr, :mi)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute(array(
+            ':mk' => $_POST['make'],
+            ':yr' => $_POST['year'],
+            ':mi' => $_POST['mileage'])
+        );
+        $success = "Record inserted";
+    }
+}
+
+$stmt = $pdo->query("SELECT make, year, mileage FROM autos");
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+?>
+<!DOCTYPE html>
 <html>
-<head></head>
-<style>
-body {
-  background-color: #0d0d0d;
-  color:white;
-  font-family: Helvetica, serif;
-  font-size: 20px;
-}
+<head>
+    <title>Tobias Brocks 73e42833</title>
+    <?php require_once "pdo.php"; ?>
+</head>
+<body>
+    <div class="container">
+        <!-- Message for guest -->
+        <?php
+        if ( isset($_REQUEST['name']) ) {
+            echo "<h1>Tracking Autos for ";
+            echo htmlentities($_REQUEST['name']);
+            echo "</h1>\n";
+        }
+        ?>
 
-</style>
-<body><table border="1">
-<?php
-$stmt = $pdo->query("SELECT mileage, year, make FROM autos");
-while($row = $stmt->fetch(PDO::FETCH_ASSOC)){
-  echo"<tr><td>";
-  echo(htmlentities($row['mileage']));
-  echo("</td><td>");
-  echo(htmlentities($row['year']));
-  echo("</td><td>");
-  echo(htmlentities($row['make']));
-  echo("</td></tr>\n");
+        <!-- Error logs -->
+        <?php
+        if ( $failure !== false ) {
+            // Look closely at the use of single and double quotes
+            echo('<p style="color: red;">'.htmlentities($failure)."</p>\n");
+        }
+        if ( $success !== false ) {
+            // Look closely at the use of single and double quotes
+            echo('<p style="color: green;">'.htmlentities($success)."</p>\n");
+        }
+        ?>
 
-}
- ?>
-<br><a href="logout.php">Log Out</a></br>
-<body class="homepage">
-<p> AddAuto </p>
-<form method="post">
-<p>Mileage:
-<input type="text" name="mileage"></p>
-<p>Year:
-<input type="text" name="year"></p>
-<p>Make:
-<input type="text" name="make"</p>
-<p><input type="submit" value="Add"/></p></form>
+        <!-- form -->
+        <form method="post">
+            <label for="make">Maker:</label>
+            <input type="text" name="make" id="make"><br/>
 
+            <label for="year">Year:</label>
+            <input type="text" name="year" id="year"><br/>
+
+            <label for="mileage">Mileage:</label>
+            <input type="text" name="mileage" id="mileage"><br/>
+
+            <input type="submit" name="Add" value="Add">
+            <input type="submit" name="logout" value="Logout">
+        </form>
+        <ul>
+            <?php
+                foreach($rows as $row) {
+                    echo "<li>".htmlentities($row['year'])." ".htmlentities($row['make'])." / ".htmlentities($row['mileage'])."</li>";
+                }
+            ?>
+        </ul>
+    </div>
 </body>
 </html>

@@ -1,71 +1,65 @@
-<?php
-session_start();
-require_once "pdo.php";
-if(isset($_POST['email']) && isset($_POST['password'])){
-$sql = "SELECT name from users
-  WHERE email = :em AND password = :pw";
-$stmt = $pdo->prepare($sql);
-$stmt->execute(array(
-  ':em' => $_POST['email'],
-  ':pw' => $_POST['password']));
-$row = $stmt->fetch(PDO::FETCH_ASSOC);
+<?php // Do not put any HTML above this line
 
-if(empty($_POST['email']) || empty($_POST['password'])){
-  echo"<h1>Email and password are required</h1>\n";
-}
-elseif(!str_contains($_POST['email'],"@")){
-  echo "<h1>Email must have an at-sign (@)</h1>\n";
-}
-elseif( ($row === FALSE) ) {
-  echo"<h1>Login incorrect.</h1>\n";
-  error_log("Login fail ".$_POST['email']);
-}
-else{
-  $_SESSION['userLogin'] = "Loggedin";
-  error_log("Login success ".$_POST['email']);
-  header("Location: autos.php".urlencode($_POST['who']));
+if ( isset($_POST['cancel'] ) ) {
+    // Redirect the browser to game.php
+    header("Location: index.php");
+    return;
 }
 
+$salt = 'XyZzy12*_';
+// $stored_hash = 'a8609e8d62c043243c4e201cbb342862';  // Pw is meow123
+$stored_hash = '1a52e17fa899cf40fb04cfc42e6352f1';  // Pw is php123
 
+$failure = false;  // If we have no POST data
+
+// Check to see if we have some POST data, if we do process it
+if ( isset($_POST['who']) && isset($_POST['pass']) ) {
+    if ( strlen($_POST['who']) < 1 || strlen($_POST['pass']) < 1 ) {
+        $failure = "User name and password are required";
+    } elseif(strpos($_POST['who'], '@') === false) {
+        $failure = "Email must have an at-sign (@)";
+    } else {
+        $check = hash('md5', $salt.$_POST['pass']);
+        if ( $check == $stored_hash ) {
+            error_log("Login success ".$_POST['who']);
+            // Redirect the browser to autos.php
+            header("Location: autos.php?name=".urlencode($_POST['who']));
+            return;
+        } else {
+            error_log("Login fail ".$_POST['who']." $check");
+            $failure = "Incorrect password";
+        }
+    }
 }
+
+// // // // // // // // // // // // // // // // // //
+// Fall through into the View
 ?>
-
+<!DOCTYPE html>
 <html>
-<head></head>
+<head>
+    <?php require_once "pdo.php"; ?>
+    <title>Tobias Brocks 73e42833</title>
+</head>
 <body>
-  <style>
-  body {
-    background-color: #0d0d0d;
-    color:white;
-    font-family: Helvetica, serif;
-    font-size: 20px;
-  }
+    <div class="container">
+        <h1>Please Log In</h1>
 
-  ul.bar {
-    list-style-type: none;
-    margin: 0;
-    padding-bottom: 50px;
-    overflow: hidden;
-    background-color: inherit;
-  }
-  ul.bar li {
-    float: left;
-  }
+        <?php
+        if ( $failure !== false ) {
+            // Look closely at the use of single and double quotes
+            echo('<p style="color: red;">'.htmlentities($failure)."</p>\n");
+        }
+        ?>
 
-  </style>
-  <body>
-    <body class="homepage">
-        <ul class="bar">
-          <li style="padding-right:30px;"><a href= "login.php">Log In</a></li>
-          <li><a href= "index.php">Registration</a></li>
-          </div>
-        </ul>
-<p> Log in </p>
-<form method="post">
-<p>Email:
-<input type="text" name="email"></p>
-<p>Password:
-<input type="password" name="password"</p>
-<p><input type="submit" value="Log in"/></p></form>
+        <form method="POST">
+            <label for="nam">User Name</label>
+            <input type="text" name="who" id="nam"><br/>
+            <label for="id_1723">Password</label>
+            <input type="text" name="pass" id="id_1723"><br/>
+            <input type="submit" value="Log In">
+            <input type="submit" name="cancel" value="Cancel">
+        </form>
+
+    </div>
 </body>
-</html>
